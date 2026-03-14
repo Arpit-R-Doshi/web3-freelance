@@ -16,11 +16,10 @@ The dependency:
 """
 
 import logging
-from functools import lru_cache
 from typing import Callable, Optional
 
-from fastapi import Depends, Header, HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, Header, HTTPException, status
+from starlette.requests import Request
 
 from app.auth.jwt_handler import decode_access_token
 from app.database.models import TokenData
@@ -29,15 +28,28 @@ from app.rbac.permissions import has_permission
 
 logger = logging.getLogger(__name__)
 
-_bearer_scheme = HTTPBearer(auto_error=True)
-
 
 async def _get_token_data(
-    credentials: HTTPAuthorizationCredentials = Security(_bearer_scheme),
+    request: Request,
+    x_jwt_token: Optional[str] = Header(
+        None, 
+        alias="X-JWT-Token", 
+        description="Swagger UI Box: Paste your JWT here (format: Bearer <token>)"
+    ),
 ) -> TokenData:
     """Decode and validate the Bearer JWT; raise 401 on failure."""
+    # Accept token from standard Authorization header OR explicit X-JWT-Token box
+    auth_header = request.headers.get("Authorization") or x_jwt_token
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication credentials (must be 'Bearer <token>')",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
     try:
-        token_data = decode_access_token(credentials.credentials)
+        token_data = decode_access_token(auth_header[7:])
     except Exception as exc:
         logger.warning("JWT validation failed: %s", exc)
         raise HTTPException(
@@ -45,6 +57,7 @@ async def _get_token_data(
             detail="Invalid or expired token. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
     return token_data
 
 

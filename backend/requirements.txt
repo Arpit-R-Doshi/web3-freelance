@@ -19,9 +19,14 @@ python-dotenv>=1.0.1
 # ── Cryptography / DID Fallback ────────────────────────────────────────────────
 cryptography>=42.0.0               # Ed25519 key generation (fallback)
 
+# ── KYC — Computer Vision & OCR ───────────────────────────────────────────────
+Pillow>=10.3.0                     # Image loading & preprocessing
+pytesseract>=0.3.10                # OCR wrapper for Tesseract
+opencv-python>=4.9.0               # Image processing + Haar cascade face detection
+numpy>=1.26.0                      # Array ops used by cv2 and face_recognition
+face-recognition>=1.3.0            # dlib HOG face encodings (optional, needs dlib)
+                                   # Install: pip install face-recognition
+                                   # Falls back to OpenCV Haar if unavailable
+
 # ── DIDKit (optional — native wheel) ──────────────────────────────────────────
-# Uncomment below to enable full W3C-VC compliance via the native DIDKit library.
-# If the pre-built wheel isn't available for your platform, the system falls back
-# to the pure-Python Ed25519 implementation automatically.
-#
 # didkit>=0.3.0
