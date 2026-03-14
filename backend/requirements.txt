@@ -1,0 +1,27 @@
+# ── Core Framework ─────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9      # Required for FastAPI file uploads
+
+# ── Database ───────────────────────────────────────────────────────────────────
+supabase>=2.4.0
+
+# ── Authentication ─────────────────────────────────────────────────────────────
+python-jose[cryptography]>=3.3.0   # JWT encode/decode (HS256)
+passlib[bcrypt]>=1.7.4             # Password hashing
+
+# ── Configuration ──────────────────────────────────────────────────────────────
+pydantic>=2.7.0
+pydantic[email]>=2.7.0             # Email field validation
+pydantic-settings>=2.3.0           # .env loading
+python-dotenv>=1.0.1
+
+# ── Cryptography / DID Fallback ────────────────────────────────────────────────
+cryptography>=42.0.0               # Ed25519 key generation (fallback)
+
+# ── DIDKit (optional — native wheel) ──────────────────────────────────────────
+# Uncomment below to enable full W3C-VC compliance via the native DIDKit library.
+# If the pre-built wheel isn't available for your platform, the system falls back
+# to the pure-Python Ed25519 implementation automatically.
+#
+# didkit>=0.3.0
