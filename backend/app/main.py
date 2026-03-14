@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.arbitration import router as arbitration_router
 from app.auth.auth_routes import router as auth_router
 from app.config import get_settings
 from app.contracts.contract_routes import router as contract_router
@@ -103,6 +104,7 @@ and gain platform access based on **verified roles**.
     app.include_router(kyc_router)
     app.include_router(identity_router)
     app.include_router(contract_router)
+    app.include_router(arbitration_router)
 
     return app
 

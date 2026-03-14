@@ -22,6 +22,7 @@ class Permission:
 
     # Dispute resolution
     RESOLVE_DISPUTE = "resolve_dispute"
+    RAISE_DISPUTE = "raise_dispute"
 
     # Administration
     MANAGE_USERS = "manage_users"
@@ -41,6 +42,7 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
     Role.CLIENT.value: {
         Permission.CREATE_CONTRACT,
         Permission.DEPOSIT_FUNDS,
+        Permission.RAISE_DISPUTE,
     },
     Role.FREELANCER.value: {
         Permission.ACCEPT_CONTRACT,
@@ -56,6 +58,7 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         Permission.SUBMIT_WORK,
         Permission.DEPOSIT_FUNDS,
         Permission.RESOLVE_DISPUTE,
+        Permission.RAISE_DISPUTE,
         Permission.MANAGE_USERS,
         Permission.APPROVE_KYC,
     },

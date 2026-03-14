@@ -145,3 +145,90 @@ class ContractSubmit(BaseModel):
     contract_id: str
     work_url: Optional[str] = None
     notes: Optional[str] = None
+
+
+# ── Arbitration Enumerations ──────────────────────────────────────────────────
+
+class DisputeStatus(str, Enum):
+    OPEN = "open"
+    IN_ARBITRATION = "in_arbitration"
+    RESOLVED = "resolved"
+
+
+class VoteDecision(str, Enum):
+    CLIENT_WINS = "client_wins"
+    FREELANCER_WINS = "freelancer_wins"
+    PARTIAL_REFUND = "partial_refund"
+
+
+# ── Arbitration Request Models ────────────────────────────────────────────────
+
+class DisputeCreate(BaseModel):
+    """Payload to raise a new dispute."""
+    job_id: str
+    freelancer_id: str
+    skill: str
+
+
+class VoteSubmit(BaseModel):
+    """Payload for a juror to submit a vote."""
+    dispute_id: str
+    decision: VoteDecision
+
+
+# ── Arbitration DB Row Models ─────────────────────────────────────────────────
+
+class DisputeDB(BaseModel):
+    """Dispute record as stored in Supabase."""
+    id: str
+    job_id: str
+    client_id: str
+    freelancer_id: str
+    skill: str
+    status: DisputeStatus = DisputeStatus.OPEN
+    jury: list[str] = []
+    result: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class VoteDB(BaseModel):
+    """Vote record as stored in Supabase."""
+    id: Optional[str] = None
+    dispute_id: str
+    juror_id: str
+    decision: VoteDecision
+    created_at: Optional[datetime] = None
+
+
+class ReputationLogDB(BaseModel):
+    """Reputation change log entry."""
+    id: Optional[str] = None
+    user_id: str
+    change: int
+    reason: str
+    created_at: Optional[datetime] = None
+
+
+# ── Arbitration Response Models ───────────────────────────────────────────────
+
+class DisputeResponse(BaseModel):
+    """Dispute details returned to the client."""
+    id: str
+    job_id: str
+    client_id: str
+    freelancer_id: str
+    skill: str
+    status: DisputeStatus
+    jury: list[str] = []
+    result: Optional[str] = None
+    votes: Optional[list[VoteDB]] = None
+    created_at: Optional[datetime] = None
+
+
+class VoteResponse(BaseModel):
+    """Response after a juror casts a vote."""
+    message: str
+    dispute_id: str
+    decision: VoteDecision
+    dispute_resolved: bool = False
+    result: Optional[str] = None
