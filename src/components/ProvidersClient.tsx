@@ -7,6 +7,7 @@ import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import { ReactNode } from 'react';
 import { Toaster } from 'sonner';
+import RouteGuard from '@/components/layout/RouteGuard';
 
 const config = getDefaultConfig({
   appName: 'Nexus Global',
@@ -22,8 +23,10 @@ export default function ProvidersClient({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          {children}
-          <Toaster position="bottom-right" richColors />
+          <RouteGuard>
+            {children}
+            <Toaster position="bottom-right" richColors />
+          </RouteGuard>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
