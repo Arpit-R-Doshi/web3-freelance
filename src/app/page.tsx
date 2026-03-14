@@ -45,55 +45,6 @@ export default function Home() {
     }
   }, [isMounted, isConnected, address, router]);
 
-  useEffect(() => {
-    if (!isVerifyingKYC || !address) return;
-
-    const handleMessage = (event: MessageEvent) => {
-      // Validate origin if needed, but for sandbox we accept any
-      if (event.data?.type === "DIDIT_SUCCESS") {
-         setKycStatus("success");
-         setIframeUrl(null);
-         
-         // Finalize registration
-         finalizeRegistration();
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [isVerifyingKYC, address]);
-
-  const finalizeRegistration = () => {
-    try {
-      // Fetch or initialize registry
-      const registryStr = localStorage.getItem("nexus_registry");
-      const registry = registryStr ? JSON.parse(registryStr) : {};
-      
-      // Save new user profile with KYC flag
-      registry[address!.toLowerCase()] = { 
-        name: name.trim(), 
-        role,
-        diditKycVerified: true,
-        verificationDate: new Date().toISOString()
-      };
-      localStorage.setItem("nexus_registry", JSON.stringify(registry));
-
-      toast.success("Identity Verified & Account Created!");
-      
-      // Route to destination
-      setTimeout(() => {
-        router.push(`/${role}`);
-      }, 500);
-
-    } catch (err) {
-      console.error(err);
-      toast.error("Account Creation Failed");
-      setIsRegistering(false);
-      setIsVerifyingKYC(false);
-      setKycStatus("");
-    }
-  };
-
   const handleRegister = async () => {
     if (!name.trim()) return toast.error("Please enter your name");
     if (!role) return toast.error("Please select a role");
@@ -104,6 +55,12 @@ export default function Home() {
     setKycStatus("scanning");
 
     try {
+      // Save pending registration state for after the redirect
+      localStorage.setItem("nexus_pending_registration", JSON.stringify({
+        name: name.trim(),
+        role: role
+      }));
+
       const response = await fetch("/api/didit/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -119,8 +76,13 @@ export default function Home() {
         throw new Error(data.error || "Failed to create Didit session");
       }
 
-      setIframeUrl(data.url);
       setKycStatus("analyzing");
+      toast.success("Redirecting to Didit secure environment...");
+      
+      // Full page redirect to Didit (Bypasses Chrome Private Network Access blocks on iframes)
+      setTimeout(() => {
+        window.location.href = data.url;
+      }, 800);
 
     } catch (err: any) {
       console.error(err);
@@ -128,6 +90,7 @@ export default function Home() {
       setIsRegistering(false);
       setIsVerifyingKYC(false);
       setKycStatus("");
+      localStorage.removeItem("nexus_pending_registration");
     }
   };
 
@@ -180,47 +143,22 @@ export default function Home() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="flex flex-col items-center justify-center py-4 text-center w-full"
             >
-              {iframeUrl ? (
-                <div className="w-full bg-white rounded-xl overflow-hidden shadow-inner border border-slate-200" style={{ height: "600px" }}>
-                  <iframe 
-                    src={iframeUrl}
-                    className="w-full h-full border-0"
-                    allow="camera; microphone; geolocation"
-                    title="Didit Verification"
-                  />
-                </div>
-              ) : (
-                <>
-                  {/* Loading State Before Iframe */}
-                  <div className="relative w-24 h-24 mb-6 mt-8">
-                    {kycStatus === "success" ? (
-                      <motion.div 
-                        initial={{ scale: 0 }} 
-                        animate={{ scale: 1 }} 
-                        className="w-full h-full bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500"
-                      >
-                        <CheckCircle className="w-12 h-12" />
-                      </motion.div>
-                    ) : (
-                      <>
-                        <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                        <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <ScanFace className={`w-10 h-10 ${kycStatus === 'analyzing' ? 'text-blue-600 animate-pulse' : 'text-slate-400'}`} />
-                        </div>
-                      </>
-                    )}
+              <>
+                <div className="relative w-24 h-24 mb-6 mt-8">
+                  <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                  <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ScanFace className={`w-10 h-10 ${kycStatus === 'analyzing' ? 'text-blue-600 animate-pulse' : 'text-slate-400'}`} />
                   </div>
-                  
-                  <h3 className="text-xl font-bold text-slate-800 mb-2">
-                    {kycStatus === "success" ? "Identity Verified" : "Initializing Didit..."}
-                  </h3>
-                  <p className="text-sm text-slate-500 max-w-[250px] mx-auto mb-8">
-                    {kycStatus === "scanning" && "Requesting secure verification session... "}
-                    {kycStatus === "success" && "Your Web3 Identity has been securely minted."}
-                  </p>
-                </>
-              )}
+                </div>
+                
+                <h3 className="text-xl font-bold text-slate-800 mb-2">
+                  Initializing Didit...
+                </h3>
+                <p className="text-sm text-slate-500 max-w-[250px] mx-auto mb-8">
+                  Routing you to our secure ID verification partner.
+                </p>
+              </>
             </motion.div>
           ) : (
             <motion.div 
