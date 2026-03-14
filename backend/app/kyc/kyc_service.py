@@ -1,9 +1,9 @@
 """
 kyc/kyc_service.py — KYC business logic.
 
-Handles KYC submission persistence and the approval workflow.
-For the hackathon, KYC is auto-approved immediately after submission.
-In production this would invoke a third-party verification service.
+Handles KYC submission persistence and the approval/rejection workflow.
+Approval is only triggered after real Aadhaar verification passes in
+document_processor.py.
 """
 
 import logging
@@ -23,17 +23,10 @@ async def submit_kyc(
     document_path: str,
     selfie_path: str,
 ) -> KYCRecord:
-    """Persist a KYC submission and trigger auto-approval.
+    """Persist a KYC submission with status='pending'.
 
-    Args:
-        user_id:         UUID of the submitting user.
-        document_type:   E.g. 'passport', 'driving_licence', 'national_id'.
-        document_number: Document identifier string.
-        document_path:   Local path to saved document image.
-        selfie_path:     Local path to saved selfie image.
-
-    Returns:
-        KYCRecord with status='pending' (immediately promoted to 'approved').
+    Does NOT approve automatically — caller must inspect the verification
+    result from document_processor.extract_document_info() first.
     """
     db = get_db()
 
@@ -56,6 +49,41 @@ async def submit_kyc(
     return KYCRecord(**row)
 
 
+
+async def reject_kyc(user_id: str, reason: str = "verification_failed") -> None:
+    """Mark a user's KYC as rejected.
+
+    Sets kyc_status = 'rejected' on the user row and marks the latest
+    KYC submission as 'rejected'.
+
+    Args:
+        user_id: UUID of the user to reject.
+        reason:  Short reason code for logging/debugging.
+    """
+    db = get_db()
+
+    # Update user row
+    db.table("users").update({"kyc_status": KYCStatus.REJECTED.value}).eq(
+        "id", user_id
+    ).execute()
+
+    # Mark latest submission
+    submissions = (
+        db.table("kyc_submissions")
+        .select("id")
+        .eq("user_id", user_id)
+        .order("submitted_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if submissions.data:
+        db.table("kyc_submissions").update({"status": "rejected"}).eq(
+            "id", submissions.data[0]["id"]
+        ).execute()
+
+    logger.warning("KYC rejected for user %s — reason: %s", user_id, reason)
+
+
 async def approve_kyc(user_id: str) -> str:
     """Approve KYC for a user and issue a Verifiable Credential.
 
@@ -69,6 +97,7 @@ async def approve_kyc(user_id: str) -> str:
     Returns:
         Signed VC JWT string.
     """
+
     db = get_db()
 
     # ── Update user KYC status ────────────────────────────────────────────────

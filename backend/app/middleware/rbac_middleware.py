@@ -11,8 +11,7 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Security, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, Header, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -22,25 +21,39 @@ from app.database.models import TokenData
 
 logger = logging.getLogger(__name__)
 
-_bearer_scheme = HTTPBearer(auto_error=True)
-
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Security(_bearer_scheme),
+    request: Request,
+    x_jwt_token: Optional[str] = Header(
+        None, 
+        alias="X-JWT-Token", 
+        description="Swagger UI Box: Paste your JWT here (format: Bearer <token>)"
+    ),
 ) -> TokenData:
     """FastAPI dependency: decode Bearer JWT and return TokenData.
 
     Raises:
         HTTPException 401: If the token is missing, malformed, or expired.
     """
+    # Accept token from standard Authorization header OR explicit X-JWT-Token box
+    auth_header = request.headers.get("Authorization") or x_jwt_token
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication credentials (must be 'Bearer <token>')",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
     try:
-        return decode_access_token(credentials.credentials)
+        return decode_access_token(auth_header[7:])
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
 
 
 class RBACLoggingMiddleware(BaseHTTPMiddleware):

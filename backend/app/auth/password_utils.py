@@ -1,22 +1,30 @@
 """
 auth/password_utils.py — Password hashing and verification.
 
-Uses passlib with bcrypt backend. All password operations go
-through this module to keep hashing logic in one place.
+Uses the bcrypt library directly because passlib 1.7.4 has a known
+compatibility bug with bcrypt >= 4.0.0.
 """
 
-from passlib.context import CryptContext
+import bcrypt
 
-# bcrypt context — cost factor 12 is a good default for hackathon
-# (increase in production as hardware allows)
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+# bcrypt cost factor 12 is a good default for hackathon
+_ROUNDS = 12
 
 
 def hash_password(plain: str) -> str:
     """Return a bcrypt hash of *plain*."""
-    return _pwd_context.hash(plain)
+    # bcrypt requires bytes
+    pwd_bytes = plain.encode("utf-8")
+    salt = bcrypt.gensalt(rounds=_ROUNDS)
+    hashed_bytes = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed_bytes.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Return True if *plain* matches *hashed*."""
-    return _pwd_context.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except ValueError:
+        # Catch invalid hash formats
+        return False
+
