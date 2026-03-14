@@ -1,0 +1,96 @@
+# ───────────────────────────────────────────────
+# Python
+# ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# uv
+# uv.lock is intentionally committed — do NOT ignore it
+
+# ───────────────────────────────────────────────
+# Environment / secrets
+# ───────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ───────────────────────────────────────────────
+# Node / Next.js
+# ───────────────────────────────────────────────
+node_modules/
+.next/
+.nuxt/
+out/
+dist/
+.cache/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ───────────────────────────────────────────────
+# Foundry / Solidity
+# ───────────────────────────────────────────────
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+# lib/ contains forge-std & openzeppelin as git submodules — keep tracked
+# contracts/lib/
+
+# ───────────────────────────────────────────────
+# Databases & runtime data
+# ───────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+
+# ───────────────────────────────────────────────
+# Uploaded / generated files (validator service)
+# ───────────────────────────────────────────────
+validator/repos/
+validator/tests_generated/
+
+# Auth service KYC document uploads
+auth/auth/backend/storage/
+
+# ───────────────────────────────────────────────
+# Logs
+# ───────────────────────────────────────────────
+*.log
+logs/
+*.out
+
+# ───────────────────────────────────────────────
+# OS & editor
+# ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ───────────────────────────────────────────────
+# Misc
+# ───────────────────────────────────────────────
+*.exe
+!auth/auth/backend/tesseract_installer.exe
