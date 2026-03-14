@@ -11,9 +11,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # ── Supabase ──────────────────────────────────────────────────────────────
-    supabase_url: str = ""
-    supabase_key: str = ""
+    # ── Database ─────────────────────────────────────────────────────────────
+    database_path: str = "data/app.db"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     jwt_secret: str = "changeme-use-a-strong-secret-in-production"

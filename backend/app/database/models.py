@@ -129,7 +129,7 @@ class CredentialResponse(BaseModel):
     message: str = "Verifiable credential issued successfully."
 
 
-# ── Contract Models (demo) ────────────────────────────────────────────────────
+# ── Contract Models (demo — kept for backward compat) ─────────────────────────
 
 class ContractCreate(BaseModel):
     title: str
@@ -145,6 +145,168 @@ class ContractSubmit(BaseModel):
     contract_id: str
     work_url: Optional[str] = None
     notes: Optional[str] = None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FREELANCE PLATFORM MODELS
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Freelance Enumerations ────────────────────────────────────────────────────
+
+class JobStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class ApplicationStatus(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class ContractStatus(str, Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    DISPUTED = "disputed"
+    CANCELLED = "cancelled"
+
+
+class MilestoneStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    DISPUTED = "disputed"
+
+
+# ── Job Models ────────────────────────────────────────────────────────────────
+
+class JobCreateRequest(BaseModel):
+    """Payload to post a new job."""
+    title: str
+    description: Optional[str] = None
+    skill_category: Optional[str] = None
+    budget: Optional[float] = None
+
+
+class JobDB(BaseModel):
+    """Job row from the database."""
+    id: str
+    client_id: str
+    title: str
+    description: Optional[str] = None
+    skill_category: Optional[str] = None
+    budget: Optional[float] = None
+    status: JobStatus = JobStatus.OPEN
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class JobResponse(BaseModel):
+    """Job details returned to clients."""
+    id: str
+    client_id: str
+    title: str
+    description: Optional[str] = None
+    skill_category: Optional[str] = None
+    budget: Optional[float] = None
+    status: JobStatus
+    application_count: Optional[int] = None
+    created_at: Optional[str] = None
+
+
+# ── Application Models ────────────────────────────────────────────────────────
+
+class ApplicationCreateRequest(BaseModel):
+    """Payload for a freelancer to apply to a job."""
+    cover_letter: Optional[str] = None
+    proposed_rate: Optional[float] = None
+
+
+class ApplicationDB(BaseModel):
+    """Application row from the database."""
+    id: str
+    job_id: str
+    freelancer_id: str
+    cover_letter: Optional[str] = None
+    proposed_rate: Optional[float] = None
+    status: ApplicationStatus = ApplicationStatus.PENDING
+    created_at: Optional[str] = None
+
+
+class ApplicationResponse(BaseModel):
+    """Application details returned to clients."""
+    id: str
+    job_id: str
+    freelancer_id: str
+    cover_letter: Optional[str] = None
+    proposed_rate: Optional[float] = None
+    status: ApplicationStatus
+    created_at: Optional[str] = None
+
+
+# ── Contract Models (real) ────────────────────────────────────────────────────
+
+class MilestoneInput(BaseModel):
+    """A single milestone within a contract creation request."""
+    title: str
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    due_date: Optional[str] = None
+
+
+class ContractCreateRequest(BaseModel):
+    """Payload to create a milestone-based contract."""
+    job_id: str
+    freelancer_id: str
+    total_amount: Optional[float] = None
+    milestones: list[MilestoneInput] = []
+
+
+class ContractDB(BaseModel):
+    """Contract row from the database."""
+    id: str
+    job_id: str
+    client_id: str
+    freelancer_id: str
+    total_amount: Optional[float] = None
+    status: ContractStatus = ContractStatus.ACTIVE
+    created_at: Optional[str] = None
+
+
+class MilestoneDB(BaseModel):
+    """Milestone row from the database."""
+    id: str
+    contract_id: str
+    title: str
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    status: MilestoneStatus = MilestoneStatus.PENDING
+    work_url: Optional[str] = None
+    submission_notes: Optional[str] = None
+    due_date: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class MilestoneSubmitRequest(BaseModel):
+    """Payload for a freelancer to submit work for a milestone."""
+    work_url: Optional[str] = None
+    submission_notes: Optional[str] = None
+
+
+class ContractResponse(BaseModel):
+    """Contract details with milestones."""
+    id: str
+    job_id: str
+    client_id: str
+    freelancer_id: str
+    total_amount: Optional[float] = None
+    status: ContractStatus
+    milestones: list[MilestoneDB] = []
+    created_at: Optional[str] = None
 
 
 # ── Arbitration Enumerations ──────────────────────────────────────────────────

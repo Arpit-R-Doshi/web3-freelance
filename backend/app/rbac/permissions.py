@@ -24,6 +24,12 @@ class Permission:
     RESOLVE_DISPUTE = "resolve_dispute"
     RAISE_DISPUTE = "raise_dispute"
 
+    # Freelance platform
+    POST_JOB = "post_job"
+    APPLY_JOB = "apply_job"
+    MANAGE_APPLICATION = "manage_application"
+    APPROVE_MILESTONE = "approve_milestone"
+
     # Administration
     MANAGE_USERS = "manage_users"
     APPROVE_KYC = "approve_kyc"
@@ -43,10 +49,14 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         Permission.CREATE_CONTRACT,
         Permission.DEPOSIT_FUNDS,
         Permission.RAISE_DISPUTE,
+        Permission.POST_JOB,
+        Permission.MANAGE_APPLICATION,
+        Permission.APPROVE_MILESTONE,
     },
     Role.FREELANCER.value: {
         Permission.ACCEPT_CONTRACT,
         Permission.SUBMIT_WORK,
+        Permission.APPLY_JOB,
     },
     Role.ARBITRATOR.value: {
         Permission.RESOLVE_DISPUTE,
@@ -59,6 +69,10 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         Permission.DEPOSIT_FUNDS,
         Permission.RESOLVE_DISPUTE,
         Permission.RAISE_DISPUTE,
+        Permission.POST_JOB,
+        Permission.APPLY_JOB,
+        Permission.MANAGE_APPLICATION,
+        Permission.APPROVE_MILESTONE,
         Permission.MANAGE_USERS,
         Permission.APPROVE_KYC,
     },

@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 try:
     import didkit as _didkit  # type: ignore
 
+    # The pip didkit 0.2.1 version lacks the required functions (e.g. generate_key). 
+    # Use the same strict check here to ensure we fall back correctly.
+    if getattr(_didkit, "issue_credential", None) is None:
+        raise ImportError("Installed didkit version lacks issue_credential function")
+
     _DIDKIT_AVAILABLE = True
 except ImportError:
     _DIDKIT_AVAILABLE = False
@@ -78,35 +83,34 @@ def _sign_credential_didkit(credential: dict, jwk: str) -> str:
 
 
 def _sign_credential_fallback(credential: dict, jwk: str) -> str:
-    """Sign a VC using python-jose when DIDKit is not available.
+    """Sign a VC manually when DIDKit is not available, avoiding python-jose limitation.
 
-    Produces a compact JWT where the payload is the credential.
+    Produces a compact JWT where the payload is the credential using EdDSA.
     """
     import base64
 
-    from jose import jwt as jose_jwt
+    def b64url_encode(data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
     jwk_data = json.loads(jwk)
 
     # Reconstruct raw Ed25519 private key bytes from JWK
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives.serialization import (
-        Encoding,
-        PrivateFormat,
-        NoEncryption,
-    )
 
     priv_bytes = base64.urlsafe_b64decode(jwk_data["d"] + "==")
     private_key = Ed25519PrivateKey.from_private_bytes(priv_bytes)
-    pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
 
-    token = jose_jwt.encode(
-        {**credential, "jti": credential["id"]},
-        pem.decode(),
-        algorithm="EdDSA",
-        headers={"typ": "JWT", "alg": "EdDSA"},
-    )
-    return token
+    header_dict = {"typ": "JWT", "alg": "EdDSA"}
+    payload_dict = {**credential, "jti": credential["id"]}
+
+    header_b64 = b64url_encode(json.dumps(header_dict, separators=(",", ":")).encode("utf-8"))
+    payload_b64 = b64url_encode(json.dumps(payload_dict, separators=(",", ":")).encode("utf-8"))
+
+    signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+    signature = private_key.sign(signing_input)
+    signature_b64 = b64url_encode(signature)
+
+    return f"{header_b64}.{payload_b64}.{signature_b64}"
 
 
 async def issue_credential(

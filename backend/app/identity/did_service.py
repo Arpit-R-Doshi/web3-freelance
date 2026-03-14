@@ -30,14 +30,18 @@ logger = logging.getLogger(__name__)
 # ── DIDKit import with graceful fallback ──────────────────────────────────────
 try:
     import didkit as _didkit  # type: ignore
+    
+    # didkit 0.2.1 installed via pip doesn't expose key generation properly
+    # Test if it has the required generation function
+    if not hasattr(_didkit, 'generate_ed25519_key') and not hasattr(_didkit, 'generate_key'):
+        raise ImportError("Installed didkit version lacks key generation functions")
 
     _DIDKIT_AVAILABLE = True
     logger.info("DIDKit native library loaded.")
-except ImportError:
+except ImportError as e:
     _DIDKIT_AVAILABLE = False
     logger.warning(
-        "DIDKit not found — using pure-Python Ed25519 fallback. "
-        "Run `pip install didkit` for full W3C-VC compliance."
+        f"DIDKit issue ({e}) — using pure-Python Ed25519 fallback."
     )
 
 if not _DIDKIT_AVAILABLE:
@@ -103,7 +107,7 @@ def _generate_did_fallback() -> Tuple[str, str]:
 
 def _generate_did_didkit() -> Tuple[str, str]:
     """Generate a did:key DID using the native DIDKit library."""
-    jwk = _didkit.generate_ed25519_key()
+    jwk = _didkit.generate_key("ed25519")
     did = _didkit.key_to_did("key", jwk)
     return did, jwk
 

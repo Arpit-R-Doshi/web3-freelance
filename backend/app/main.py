@@ -18,8 +18,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.arbitration import router as arbitration_router
 from app.auth.auth_routes import router as auth_router
 from app.config import get_settings
-from app.contracts.contract_routes import router as contract_router
+from app.database.init_db import init_db
 from app.identity import router as identity_router
+from app.jobs import contract_router, job_router
 from app.kyc.kyc_routes import router as kyc_router
 from app.middleware.rbac_middleware import RBACLoggingMiddleware
 
@@ -38,15 +39,18 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler — runs once at startup and shutdown."""
     settings = get_settings()
 
+    # Initialise SQLite database (creates tables on first run)
+    init_db()
+    logger.info("Database ready: %s", settings.database_path)
+
     # Ensure local storage directory exists
     os.makedirs(settings.upload_dir, exist_ok=True)
     logger.info("Upload directory ready: %s", settings.upload_dir)
-    logger.info("Platform DID: %s", settings.platform_did)
-    logger.info("🚀 Identity & Trust Layer started.")
+    logger.info("🚀 Freelance Platform started.")
 
     yield  # ← application runs here
 
-    logger.info("👋 Identity & Trust Layer shutting down.")
+    logger.info("👋 Freelance Platform shutting down.")
 
 
 # ── App factory ────────────────────────────────────────────────────────────────
@@ -54,29 +58,27 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="Identity & Trust Layer",
+        title="Programmable Escrow Platform",
         summary=(
-            "Hackathon-ready cross-border collaboration platform — "
-            "decentralized identity (DID + VC) + RBAC authorization."
+            "Freelance marketplace with milestone-based contracts, "
+            "reputation-based arbitration, and decentralized identity."
         ),
         description="""
 ## Overview
-A trust infrastructure where users prove identity using **Verifiable Credentials**
-and gain platform access based on **verified roles**.
+A full-stack programmable escrow platform for freelance work.
 
-## Demo Flow
-1. `POST /auth/register` — Register + auto-generate `did:key`
-2. `POST /auth/login` — Obtain JWT
-3. `POST /kyc/submit` — Upload documents → VC issued automatically
-4. Use JWT in `Authorization: Bearer <token>` header
-5. `POST /contracts/create` _(CLIENT only)_, `/contracts/accept` _(FREELANCER only)_
-6. Pass `X-VC-Token: <vc_jwt>` for identity proof on any endpoint
+## Flow
+1. `POST /auth/register` → `POST /auth/login` → get JWT
+2. CLIENT: `POST /jobs` → FREELANCER: `POST /jobs/{id}/apply`
+3. CLIENT: `POST /applications/{id}/accept` → `POST /contracts` (with milestones)
+4. FREELANCER: `POST /milestones/{id}/submit` → CLIENT: `POST /milestones/{id}/approve`
+5. Disputes: `POST /disputes` → jurors vote via `POST /arbitration/vote`
 
 ## Roles & Permissions
-| Role | Permissions |
-|------|------------|
-| CLIENT | create_contract, deposit_funds |
-| FREELANCER | accept_contract, submit_work |
+| Role | Key Permissions |
+|------|----------------|
+| CLIENT | post_job, create_contract, approve_milestone, raise_dispute |
+| FREELANCER | apply_job, submit_work |
 | ARBITRATOR | resolve_dispute |
 | ADMIN | all permissions |
         """,
@@ -103,6 +105,7 @@ and gain platform access based on **verified roles**.
     app.include_router(auth_router)
     app.include_router(kyc_router)
     app.include_router(identity_router)
+    app.include_router(job_router)
     app.include_router(contract_router)
     app.include_router(arbitration_router)
 
