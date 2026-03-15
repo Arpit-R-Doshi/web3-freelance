@@ -10,7 +10,7 @@ import { Toaster } from 'sonner';
 import RouteGuard from '@/components/layout/RouteGuard';
 
 const config = getDefaultConfig({
-  appName: 'Nexus Global',
+  appName: 'WeWorkTogether',
   projectId: 'TEST_ID',
   chains: [foundry],
   ssr: true,

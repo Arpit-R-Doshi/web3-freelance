@@ -7,16 +7,23 @@ import USDTABI from '@/lib/abi/MockUSDT.json';
 
 const USDT_ADDRESS = process.env.NEXT_PUBLIC_USDT_ADDRESS as `0x${string}`;
 
-export default function ConnectWallet() {
+interface ConnectWalletProps {
+  /** Override the address used for USDT balance display (e.g. registered wallet). Falls back to connected MetaMask address. */
+  balanceAddress?: `0x${string}` | null;
+}
+
+export default function ConnectWallet({ balanceAddress }: ConnectWalletProps = {}) {
   const { address } = useAccount();
+
+  const effectiveBalanceAddress = balanceAddress ?? address;
 
   const { data: balanceData } = useReadContract({
     address: USDT_ADDRESS,
     abi: USDTABI as any,
     functionName: "balanceOf",
-    args: [address],
+    args: [effectiveBalanceAddress],
     query: {
-      enabled: !!address,
+      enabled: !!effectiveBalanceAddress,
     }
   });
 
@@ -54,7 +61,7 @@ export default function ConnectWallet() {
                   <button 
                     onClick={openConnectModal} 
                     type="button"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full font-bold transition-all shadow-md text-sm"
+                    className="bg-[#3D5AFE] hover:bg-[#304FFE] text-white px-5 py-2.5 rounded-lg font-black uppercase tracking-wider transition-all text-sm border-3 border-[#1A1A2E] shadow-[3px_3px_0px_#1A1A2E] hover:shadow-[1px_1px_0px_#1A1A2E] hover:translate-x-[2px] hover:translate-y-[2px]"
                   >
                     Connect Wallet
                   </button>
@@ -66,7 +73,7 @@ export default function ConnectWallet() {
                   <button 
                     onClick={openChainModal} 
                     type="button"
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full font-bold transition-all text-sm shadow-sm"
+                    className="bg-[#FF1744] hover:bg-[#D50000] text-white px-4 py-2 rounded-lg font-black uppercase tracking-wider transition-all text-sm border-3 border-[#1A1A2E] shadow-[3px_3px_0px_#1A1A2E]"
                   >
                     Wrong network
                   </button>
@@ -74,11 +81,11 @@ export default function ConnectWallet() {
               }
 
               return (
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-full font-medium transition-all text-sm border border-slate-200"
+                    className="flex items-center gap-2 bg-[#F5F0E8] hover:bg-[#E8EAF6] text-text-primary px-3 py-2 rounded-lg font-bold transition-all text-sm border-2 border-[#1A1A2E] shadow-[2px_2px_0px_#1A1A2E] hover:shadow-[1px_1px_0px_#1A1A2E] hover:translate-x-[1px] hover:translate-y-[1px]"
                   >
                     {chain.hasIcon && (
                       <div
@@ -86,8 +93,9 @@ export default function ConnectWallet() {
                           background: chain.iconBackground,
                           width: 16,
                           height: 16,
-                          borderRadius: 999,
+                          borderRadius: 4,
                           overflow: 'hidden',
+                          border: '1px solid #1A1A2E',
                         }}
                       >
                         {chain.iconUrl && (
@@ -105,10 +113,10 @@ export default function ConnectWallet() {
                   <button 
                     onClick={openAccountModal} 
                     type="button"
-                    className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-full font-medium transition-all text-sm border border-slate-700 shadow-sm"
+                    className="flex items-center gap-2 bg-[#1A1A2E] hover:bg-[#252542] text-white px-4 py-2 rounded-lg font-bold transition-all text-sm border-2 border-[#1A1A2E] shadow-[2px_2px_0px_#3D5AFE] hover:shadow-[1px_1px_0px_#3D5AFE] hover:translate-x-[1px] hover:translate-y-[1px]"
                   >
-                    <span className="text-emerald-400 font-bold tracking-wider">${usdtBalance} <span className="text-[10px] text-emerald-200/50">USDT</span></span>
-                    <span className="w-[1px] h-4 bg-slate-600 mx-1"></span>
+                    <span className="text-[#00C853] font-black tracking-wider">{usdtBalance} <span className="text-[10px] text-[#00C853]/60 font-bold">Tokens</span></span>
+                    <span className="w-[2px] h-4 bg-[#3D5AFE] mx-1"></span>
                     {account.displayName}
                   </button>
                 </div>

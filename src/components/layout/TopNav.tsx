@@ -1,96 +1,123 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAccount, useDisconnect } from "wagmi";
-import { LogOut, Shield, ChevronLeft, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck, UserCircle, Sun, Moon } from "lucide-react";
 import ConnectWallet from "@/components/ConnectWallet";
+import WwtLogo from "@/components/WwtLogo";
 import { useEffect, useState } from "react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { decodeToken } from "@/lib/auth-client";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function TopNav() {
-  const router = useRouter();
   const pathname = usePathname();
   const { isConnected, address } = useAccount();
   const { disconnect } = useDisconnect();
-  
+  const { theme, toggleTheme } = useTheme();
+
   const [userName, setUserName] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("");
-  const [isKycVerified, setIsKycVerified] = useState<boolean>(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("wwt_token");
+    if (token) {
+      const payload = decodeToken(token);
+      if (payload) {
+        setUserName(payload.name);
+        setUserRole(payload.role);
+        return;
+      }
+    }
     if (address) {
-      const registryStr = localStorage.getItem("nexus_registry");
+      const registryStr = localStorage.getItem("wwt_registry");
       if (registryStr) {
         try {
           const registry = JSON.parse(registryStr);
           const user = registry[address.toLowerCase()];
-          if (user) {
-            setUserName(user.name);
-            setUserRole(user.role);
-            setIsKycVerified(!!user.diditKycVerified);
-          }
-        } catch (e) {}
+          if (user) { setUserName(user.name); setUserRole(user.role); }
+        } catch {}
       }
     } else {
-      setUserName("");
-      setUserRole("");
-      setIsKycVerified(false);
+      setUserName(""); setUserRole("");
     }
-  }, [address, pathname]); // Re-run if path changes to ensure fresh state
+  }, [address, pathname]);
 
   const handleLogout = () => {
     disconnect();
-    // Do not wipe registry so they can log back in smoothly later,
-    // just push them to the onboarding screen.
+    localStorage.removeItem("wwt_token");
+    localStorage.removeItem("wwt_user");
     window.location.href = "/";
   };
 
-  // Don't show nav on the login/onboarding screen
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname.startsWith("/onboarding") || pathname === "/verify-success") return null;
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
+    <nav className="sticky top-0 z-50 w-full nav-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
+
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg shadow-sm group-hover:shadow-md transition-all">
-               <Shield className="w-4 h-4 text-white" />
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 flex items-center justify-center bg-[#3D5AFE] border-3 border-[#1A1A2E] rounded-lg shadow-[3px_3px_0px_#1A1A2E] group-hover:shadow-[4px_4px_0px_#1A1A2E] group-hover:translate-x-[-1px] group-hover:translate-y-[-1px] transition-all duration-200">
+              <WwtLogo className="w-5 h-5 text-white" />
             </div>
-            <span className="font-extrabold text-xl tracking-tight text-slate-800 hidden sm:inline-block">Nexus Global</span>
+            <span className="font-black text-lg tracking-tight text-text-primary hidden sm:inline-block uppercase">
+              WeWork<span className="text-[#3D5AFE]">Together</span>
+            </span>
           </Link>
 
-          {/* User Status */}
-          <div className="flex items-center gap-4">
-            {isConnected && userName && (
-               <div className="hidden md:flex flex-col items-end mr-2">
-                 <div className="flex items-center gap-1.5">
-                   <span className="text-sm font-bold text-slate-800">{userName}</span>
-                   {isKycVerified && (
-                     <div title="Didit Identity Verified">
-                       <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                     </div>
-                   )}
-                 </div>
-                 <span className="text-xs font-bold uppercase tracking-widest text-blue-600">{userRole} Portal</span>
-               </div>
+          {/* Right side */}
+          <div className="flex items-center gap-2">
+
+            {/* User identity */}
+            {userName && (
+              <Link
+                href={`/${userRole}/profile`}
+                className="hidden md:flex flex-col items-end mr-3 hover:opacity-80 transition-opacity"
+                title="View Profile"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-black text-text-primary">{userName}</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#00C853]" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#3D5AFE]">
+                  {userRole} Portal
+                </span>
+              </Link>
             )}
-            
+
+            {userName && (
+              <Link
+                href={`/${userRole}/profile`}
+                className="p-2 text-text-muted hover:text-[#3D5AFE] hover:bg-[#E8EAF6] rounded-lg border-2 border-transparent hover:border-[#3D5AFE] transition-all duration-150"
+                title="My Profile"
+              >
+                <UserCircle className="w-5 h-5" />
+              </Link>
+            )}
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-text-muted hover:text-[#FFD600] hover:bg-[#FFF8E1] rounded-lg border-2 border-transparent hover:border-[#FFD600] transition-all duration-150"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark"
+                ? <Sun className="w-4.5 h-4.5" />
+                : <Moon className="w-4.5 h-4.5" />}
+            </button>
+
             <ConnectWallet />
 
-            {isConnected && (
-              <button 
+            {(isConnected || userName) && (
+              <button
                 onClick={handleLogout}
-                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"
-                title="Disconnect & Logout"
+                className="p-2 text-text-muted hover:text-[#FF1744] hover:bg-[#FCE4EC] rounded-lg border-2 border-transparent hover:border-[#FF1744] transition-all duration-150"
+                title="Sign out"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4.5 h-4.5" />
               </button>
             )}
           </div>

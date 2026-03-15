@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  walletAddress String?  @unique
+  role          String   // "client" | "worker" | "admin"
+  kycVerified   Boolean  @default(false)
+  kycVerifiedAt DateTime?
+
+  clientProfile      ClientProfile?
+  workerProfile      WorkerProfile?
+  ownedProjects      Project[]        @relation("ProjectOwner")
+  projectAssignments ProjectWorker[]
+  notifications      Notification[]
+  commits            ProjectCommit[]  @relation("CommitAuthor")
+  raisedDisputes     DisputeRequest[] @relation("ClientDisputes")
+  juryVotes          JuryVote[]       @relation("AdminJuryVotes")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClientProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String
+  orgName   String?
+  taxNumber String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subRole  String
+  githubId String?
+  skills   String @default("[]")
+
+  reputationScore       Float @default(0)
+  completedProjectsCount Int  @default(0)
+  disputeCount          Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id          String  @id @default(cuid())
+  name        String
+  description String
+  skills      String  @default("[]") // JSON string[]
+  repoUrl     String?
+  repoName    String?
+  status      String  @default("active") // active | completed | cancelled
+
+  budget         Float?   // USD amount entered by client
+  budgetCurrency String?  // "USD" | "INR" | "EUR" | "GBP"
+  onChainId      Int?     // CrossBorderEscrow project ID
+  escrowStatus   String   @default("none") // none | funded | locked | released
+  tokenReleased  Float    @default(0)      // Tokens already paid out to worker
+
+  ownerId String
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  workers    ProjectWorker[]
+  milestones Milestone[]
+  commits    ProjectCommit[]
+  disputes   DisputeRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProjectWorker {
+  id        String   @id @default(cuid())
+  projectId String
+  workerId  String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  worker    User     @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  addedAt   DateTime @default(now())
+
+  @@unique([projectId, workerId])
+}
+
+model Milestone {
+  id                String  @id @default(cuid())
+  projectId         String
+  project           Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title             String
+  description       String
+  simpleExplanation String
+  status            String  @default("pending") // pending | in_progress | completed | failed
+  progress          Int     @default(0)
+  orderIndex        Int     @default(0)
+  dependencies      String  @default("[]") // JSON string[] of milestone IDs
+  testCases         String  @default("[]") // JSON { name, description, passed }[]
+  testsPassed       Int     @default(0)
+  testsTotal        Int     @default(3)
+  lastCommitMsg     String?
+  reviewStatus      String  @default("pending") // pending | approved | rejected
+  tokenRelease      Float?  // Tokens released when this milestone was approved
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProjectCommit {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation("CommitAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  hash      String
+  message   String
+  aiSummary String?
+  milestoneUpdates String @default("[]") // JSON [{milestoneId, newStatus, newProgress}]
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String?
+  title     String
+  message   String
+  type      String  @default("info") // info | success | warning
+  read      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model LiquidityPool {
+  id             String   @id @default(cuid())
+  currency       String   @unique // "INR" | "USD" | "GBP" | "EUR"
+  totalDeposited Float    @default(0)
+  totalTokens    Float    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DisputeRequest {
+  id               String   @id @default(cuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  raisedByClientId String
+  raisedByClient   User     @relation("ClientDisputes", fields: [raisedByClientId], references: [id], onDelete: Cascade)
+
+  type             String   // "dispute" | "revision"
+  status           String   @default("open")   // "open" | "resolved"
+  outcome          String?  // "for_client" | "for_worker"
+  resolutionText   String?
+  resolvedAt       DateTime?
+
+  // JSON stringified object of 4 questionnaire answers
+  answers          String   @default("{}")
+
+  votes            JuryVote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model JuryVote {
+  id        String         @id @default(cuid())
+  disputeId String
+  dispute   DisputeRequest @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  voterId   String
+  voter     User           @relation("AdminJuryVotes", fields: [voterId], references: [id], onDelete: Cascade)
+
+  vote      String         // "for_client" | "for_worker"
+  reason    String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([disputeId, voterId])
+}
