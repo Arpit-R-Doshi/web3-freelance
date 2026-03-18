@@ -1,4 +1,4 @@
-# Web3 Cross-Border Freelance Platform
+# WeWorkTogether
 
 A full-stack prototype integrating a local EVM blockchain (Foundry/Anvil), a Next.js App Router frontend, and Razorpay for seamless Fiat-to-Stablecoin cross-border payments.
 
